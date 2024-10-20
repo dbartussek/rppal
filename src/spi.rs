@@ -619,6 +619,31 @@ impl Spi {
         }
     }
 
+    /// Gets if automatic driving of the Slave Select pin is disabled.
+    pub fn no_ss(&self) -> Result<bool> {
+        let mut mode: u8 = 0;
+        ioctl::mode(self.spidev.as_raw_fd(), &mut mode)?;
+
+        Ok(mode & ioctl::MODE_NO_CS != 0)
+    }
+
+    /// Disables/Enables automatic driving of the Slave Select pin.
+    pub fn set_no_ss(&self, disable: bool) -> Result<()> {
+        let mut new_mode: u8 = 0;
+        ioctl::mode(self.spidev.as_raw_fd(), &mut new_mode)?;
+
+        if disable {
+            new_mode |= ioctl::MODE_NO_CS;
+        } else {
+            new_mode &= !ioctl::MODE_NO_CS;
+        }
+
+        match ioctl::set_mode(self.spidev.as_raw_fd(), new_mode) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Error::Io(e)),
+        }
+    }
+
     /// Receives incoming data from the slave device and writes it to `buffer`.
     ///
     /// The SPI protocol doesn't indicate how much incoming data is waiting,
